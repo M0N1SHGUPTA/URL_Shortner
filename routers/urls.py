@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, Header
 from schemas import url
 from services import urls as url_services
+from services import auth as auth_service
 from sqlalchemy.orm import Session
 from database import get_db
 from services.auth import getCurretUser
@@ -12,10 +14,19 @@ router = APIRouter(prefix="", tags=["urls"])
 def shorten_url(
     data: url, 
     db: Session = Depends(get_db),
-    current_user: dict = Depends(getCurretUser)
+    authorization: Optional[str] = Header(None)
 ):
-    print(f"SHortening URL for {current_user['email']}")
-    return url_services.shorten(data, db, current_user['user_id'])
+    user_id = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        payload = auth_service.verifyToken(token)
+        if "error" not in payload:
+            user_id = payload.get("user_id")
+            print(f"Shortening URL for authenticated user ID: {user_id}")
+    else:
+        print("Shortening URL for anonymous user")
+
+    return url_services.shorten(data, db, user_id)
 
 
 

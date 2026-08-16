@@ -7,7 +7,7 @@ from models import urls
 
 import hashlib
 
-def shorten(data: url, db:Session, user_id: int):
+def shorten(data: url, db:Session, user_id: int = None):
 
     check_url = db.query(urls).filter(
         urls.long_url == data.og_url,
@@ -27,12 +27,15 @@ def shorten(data: url, db:Session, user_id: int):
         user_id = user_id
     )
 
-    db.add(new_url)
-    db.commit()
-    db.refresh(new_url)
-
-
-    return new_url
+    try:
+        db.add(new_url)
+        db.commit()
+        db.refresh(new_url)
+        return new_url
+    except Exception:
+        db.rollback()
+        existing = db.query(urls).filter(urls.short_url == result_url).first()
+        return existing
 
 
 def get_short_url(short_code:str, db:Session):
